@@ -1,0 +1,13 @@
+{
+  "name": "opfs-explorer",
+  "version": "1.0.0",
+  "description": "Chrome extension to explore Origin Private File System (OPFS)",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "typescript": "^5.8.2"
+  }
+}
