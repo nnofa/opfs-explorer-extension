@@ -369,6 +369,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         action: "getFiles",
       } as ChromeMessage);
 
+      console.log("response", response);
+
       if (!response) {
         throw new Error("No response from content script");
       }

@@ -13,7 +13,9 @@
     "outDir": "./dist",
     "rootDir": "./",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["chrome"]
+    "types": ["chrome"],
+    "sourceMap": true,
+    "inlineSources": true
   },
   "include": ["*.ts"],
   "exclude": ["node_modules", "dist"]

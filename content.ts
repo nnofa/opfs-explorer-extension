@@ -343,7 +343,8 @@ async function uploadFile(
 
 // Handle messages from popup
 chrome.runtime.onMessage.addListener(
-  async (message: ChromeMessage, sender, sendResponse) => {
+  (message: ChromeMessage, sender, sendResponse) => {
+    console.log(message);
     try {
       switch (message.action) {
         case "ping":
@@ -351,48 +352,71 @@ chrome.runtime.onMessage.addListener(
           break;
 
         case "getFiles":
-          const root = await getOPFSRoot();
-          const files = await getAllFiles(root);
-          sendResponse({ success: true, data: files });
+          (async () => {
+            try {
+              const root = await getOPFSRoot();
+              const files = await getAllFiles(root); // Make sure this returns serializable data!
+              sendResponse({ success: true, data: files });
+            } catch (error) {
+              console.error("Error getting files:", error);
+              // It's good practice to send an error response back too
+              sendResponse({
+                success: false,
+                error,
+              });
+            }
+          })(); // Execute the async function immediately
           break;
 
         case "openFile":
-          if (!message.path) {
-            throw new Error("Path is required for openFile action");
-          }
-          const fileData = await readFile(message.path, await getOPFSRoot());
-          sendResponse({ success: true, data: fileData });
+          (async () => {
+            if (!message.path) {
+              throw new Error("Path is required for openFile action");
+            }
+            const fileData = await readFile(message.path, await getOPFSRoot());
+            sendResponse({ success: true, data: fileData });
+          })();
           break;
 
         case "downloadFile":
-          if (!message.path) {
-            throw new Error("Path is required for downloadFile action");
-          }
-          const downloadRoot = await getOPFSRoot();
-          const file = await readFile(message.path, downloadRoot);
-          await downloadFile(file, message.path);
-          sendResponse({ success: true });
+          (async () => {
+            if (!message.path) {
+              throw new Error("Path is required for downloadFile action");
+            }
+            const downloadRoot = await getOPFSRoot();
+            const file = await readFile(message.path, downloadRoot);
+            await downloadFile(file, message.path);
+            sendResponse({ success: true });
+          })();
           break;
 
         case "uploadFile":
-          if (!message.path || !message.data) {
-            throw new Error("Path and data are required for uploadFile action");
-          }
-          await saveFile(message.path, message.data, message.type);
-          sendResponse({ success: true });
+          (async () => {
+            if (!message.path || !message.data) {
+              throw new Error(
+                "Path and data are required for uploadFile action"
+              );
+            }
+            await saveFile(message.path, message.data, message.type);
+            sendResponse({ success: true });
+          })();
           break;
 
         case "deleteFile":
-          if (!message.path) {
-            throw new Error("Path is required for deleteFile action");
-          }
-          await deleteFile(message.path);
-          sendResponse({ success: true });
+          (async () => {
+            if (!message.path) {
+              throw new Error("Path is required for deleteFile action");
+            }
+            await deleteFile(message.path);
+            sendResponse({ success: true });
+          })();
           break;
 
         case "deleteAllFiles":
-          await deleteAllFiles();
-          sendResponse({ success: true });
+          (async () => {
+            await deleteAllFiles();
+            sendResponse({ success: true });
+          })();
           break;
 
         default:
