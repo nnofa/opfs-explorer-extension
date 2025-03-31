@@ -1,14 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background circle -->
-  <circle cx="64" cy="64" r="60" fill="#1a73e8"/>
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="#1a73e8"/>
 
-  <!-- Folder icon -->
-  <path d="M40 40h48v48H40z" fill="white" opacity="0.9"/>
-  <path d="M40 40h20l8 8h20v40H40z" fill="white"/>
+  <!-- Windows-style folder -->
+  <g transform="translate(24, 32)">
+    <!-- Main folder body -->
+    <path d="M0 0h80v64H0z" fill="#FFD700"/>
 
-  <!-- Lines representing files -->
-  <rect x="48" y="56" width="32" height="4" fill="#1a73e8"/>
-  <rect x="48" y="64" width="24" height="4" fill="#1a73e8"/>
-  <rect x="48" y="72" width="28" height="4" fill="#1a73e8"/>
+    <!-- Folder tab -->
+    <path d="M0 0h40l8 8h32v8H0z" fill="#FFE55C"/>
+
+    <!-- Folder shadow -->
+    <path d="M0 0h80v64H0z" fill="none" stroke="#D4B000" stroke-width="2"/>
+    <path d="M0 0h40l8 8h32v8H0z" fill="none" stroke="#D4B000" stroke-width="2"/>
+  </g>
+
+  <!-- Files -->
+  <g transform="translate(32, 44)">
+    <!-- File 1 -->
+    <rect width="64" height="8" rx="4" fill="#1a73e8"/>
+    <rect y="12" width="48" height="6" rx="3" fill="#1a73e8"/>
+
+    <!-- File 2 -->
+    <rect y="24" width="56" height="8" rx="4" fill="#1a73e8"/>
+    <rect y="36" width="40" height="6" rx="3" fill="#1a73e8"/>
+
+    <!-- File 3 -->
+    <rect y="48" width="52" height="8" rx="4" fill="#1a73e8"/>
+    <rect y="60" width="36" height="6" rx="3" fill="#1a73e8"/>
+  </g>
 </svg>
