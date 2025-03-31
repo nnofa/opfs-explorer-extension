@@ -23,14 +23,10 @@ interface ChromeMessage {
     | "getFiles"
     | "openFile"
     | "downloadFile"
-    | "uploadFile"
     | "deleteFile"
     | "deleteAllFiles"
     | "ping";
   path?: string;
-  data?: ArrayBuffer;
-  type?: string;
-  size?: number;
 }
 
 // Use chrome.tabs.Tab type instead of custom Tab interface
@@ -39,27 +35,15 @@ type Tab = chrome.tabs.Tab;
 document.addEventListener("DOMContentLoaded", async () => {
   const fileList = document.getElementById("fileList") as HTMLDivElement;
   const refreshBtn = document.getElementById("refreshBtn") as HTMLButtonElement;
-  const uploadBtn = document.getElementById("uploadBtn") as HTMLButtonElement;
-  const fileInput = document.getElementById("fileInput") as HTMLInputElement;
   const deleteAllBtn = document.getElementById(
     "deleteAllBtn"
   ) as HTMLButtonElement;
-  const uploadProgress = document.getElementById(
-    "uploadProgress"
-  ) as HTMLDivElement;
-  const progressFill = document.getElementById(
-    "progressFill"
-  ) as HTMLDivElement;
-  const progressText = document.getElementById(
-    "progressText"
-  ) as HTMLDivElement;
   const modal = document.getElementById("fileDetailsModal") as HTMLDivElement;
   const modalClose = document.querySelector(
     ".modal-close"
   ) as HTMLButtonElement;
 
   console.log("DOM Content Loaded");
-  console.log("File input element:", fileInput);
 
   // Function to format file size
   function formatFileSize(bytes: number): string {
@@ -182,82 +166,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return tab;
   }
 
-  // Function to upload files to OPFS
-  async function uploadFiles(files: FileList): Promise<void> {
-    const progressBar = document.getElementById(
-      "uploadProgress"
-    ) as HTMLProgressElement;
-    const statusText = document.getElementById(
-      "uploadStatus"
-    ) as HTMLDivElement;
-    let uploadedCount = 0;
-
-    try {
-      console.log("Starting file upload process");
-      console.log("Number of files to upload:", files.length);
-      console.log("Files:", files);
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        console.log(`Processing file ${i + 1}/${files.length}:`, file.name);
-        console.log("File size:", file.size);
-
-        if (file.size === 0) {
-          throw new Error(`File ${file.name} is empty`);
-        }
-
-        const buffer = await file.arrayBuffer();
-        console.log("File converted to ArrayBuffer, size:", buffer.byteLength);
-
-        if (buffer.byteLength === 0) {
-          throw new Error(`File ${file.name} buffer is empty`);
-        }
-
-        const tab = await getCurrentTab();
-        if (!tab.id) {
-          throw new Error("Tab ID is undefined");
-        }
-
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          action: "uploadFile",
-          path: file.name,
-          data: buffer,
-          type: file.type,
-          size: file.size,
-        } as ChromeMessage);
-
-        if (!response || typeof response !== "object") {
-          throw new Error(
-            `Invalid response from content script for file ${file.name}`
-          );
-        }
-
-        const uploadResponse = response as UploadResponse;
-        if (!uploadResponse.success) {
-          throw new Error(
-            uploadResponse.error || `Failed to upload ${file.name}`
-          );
-        }
-
-        uploadedCount++;
-        const progress = (uploadedCount / files.length) * 100;
-        progressBar.value = progress;
-        statusText.textContent = `Uploaded ${uploadedCount} of ${
-          files.length
-        } files (${Math.round(progress)}%)`;
-      }
-
-      statusText.textContent = `Successfully uploaded ${uploadedCount} files`;
-      progressBar.value = 100;
-    } catch (error) {
-      console.error("Error during file upload:", error);
-      statusText.textContent = `Error: ${
-        error instanceof Error ? error.message : "Failed to upload files"
-      }`;
-      throw error;
-    }
-  }
-
   // Function to download file
   async function downloadFile(path: string): Promise<void> {
     try {
@@ -369,8 +277,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         action: "getFiles",
       } as ChromeMessage);
 
-      console.log("response", response);
-
       if (!response) {
         throw new Error("No response from content script");
       }
@@ -436,22 +342,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Add event listeners
-  uploadBtn.addEventListener("click", () => {
-    console.log("Upload button clicked");
-    fileInput.click();
-  });
-
-  fileInput.addEventListener("change", (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      console.log("File input changed event triggered");
-      console.log("Files length:", input.files.length);
-      console.log("Is FileList?", input.files instanceof FileList);
-      console.log("Files entries:", [...input.files]);
-      uploadFiles(input.files);
-    }
-  });
-
   refreshBtn.addEventListener("click", listFiles);
   deleteAllBtn.addEventListener("click", deleteAllFiles);
 

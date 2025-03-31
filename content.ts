@@ -54,14 +54,10 @@ interface ChromeMessage {
     | "getFiles"
     | "openFile"
     | "downloadFile"
-    | "uploadFile"
     | "deleteFile"
     | "deleteAllFiles"
     | "ping";
   path?: string;
-  data?: ArrayBuffer;
-  type?: string;
-  size?: number; // Add size property
 }
 
 interface ChromeResponse {
@@ -143,7 +139,7 @@ async function readFile(
 // Function to save file to OPFS
 async function saveFile(
   path: string,
-  data: ArrayBuffer,
+  data: number[] | ArrayBuffer,
   type?: string
 ): Promise<void> {
   try {
@@ -178,15 +174,19 @@ async function saveFile(
       throw new Error("Failed to create writable stream");
     }
 
+    // Convert array data back to ArrayBuffer if needed
+    const buffer = Array.isArray(data) ? new Uint8Array(data).buffer : data;
+    console.log(`Writing file ${path} with buffer size:`, buffer.byteLength);
+
     // Write the data with proper type
     await writable.write({
       type: "write",
-      data: data,
+      data: buffer,
       position: 0,
     });
 
     // Truncate to ensure the file size is correct
-    await writable.truncate(data.byteLength);
+    await writable.truncate(buffer.byteLength);
 
     console.log(`File ${path} saved successfully`);
   } catch (error) {
@@ -275,72 +275,6 @@ async function deleteAllFiles(): Promise<boolean> {
   }
 }
 
-// Function to upload a file to OPFS
-async function uploadFile(
-  fileData: ArrayBuffer,
-  path: string,
-  size: number
-): Promise<boolean> {
-  let writable = undefined;
-  try {
-    console.log("Starting file upload:", { path, size });
-    const root = await getOPFSRoot();
-    const parts = path.split("/").filter(Boolean);
-    let current = root;
-
-    // Navigate to the parent directory
-    for (let i = 0; i < parts.length - 1; i++) {
-      try {
-        current = await current.getDirectoryHandle(parts[i], { create: true });
-        console.log("Created/accessed directory:", parts[i]);
-      } catch (error) {
-        console.error(`Error accessing directory ${parts[i]}:`, error);
-        throw new Error(`Directory '${parts[i]}' not found in path: ${path}`);
-      }
-    }
-
-    const fileName = parts[parts.length - 1];
-    try {
-      console.log("Creating file handle for:", fileName);
-      const fileHandle = await current.getFileHandle(fileName, {
-        create: true,
-      });
-      writable = await fileHandle.createWritable();
-
-      // Verify the file data
-      if (!fileData || fileData.byteLength === 0) {
-        throw new Error("Invalid file data: empty or zero length");
-      }
-
-      console.log("Writing file data, size:", fileData.byteLength);
-      await writable.write(fileData);
-      await writable.close();
-
-      // Verify the file was written
-      const file = await fileHandle.getFile();
-      console.log("File written successfully, actual size:", file.size);
-
-      if (file.size !== size) {
-        console.warn(`File size mismatch: expected ${size}, got ${file.size}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Error writing file:", error);
-      throw new Error(
-        `Failed to write file '${fileName}': ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-  } catch (error) {
-    console.error("Error uploading file:", error);
-    throw error;
-  } finally {
-    await writable?.close();
-  }
-}
-
 // Handle messages from popup
 chrome.runtime.onMessage.addListener(
   (message: ChromeMessage, sender, sendResponse) => {
@@ -355,17 +289,16 @@ chrome.runtime.onMessage.addListener(
           (async () => {
             try {
               const root = await getOPFSRoot();
-              const files = await getAllFiles(root); // Make sure this returns serializable data!
+              const files = await getAllFiles(root);
               sendResponse({ success: true, data: files });
             } catch (error) {
               console.error("Error getting files:", error);
-              // It's good practice to send an error response back too
               sendResponse({
                 success: false,
                 error,
               });
             }
-          })(); // Execute the async function immediately
+          })();
           break;
 
         case "openFile":
@@ -386,18 +319,6 @@ chrome.runtime.onMessage.addListener(
             const downloadRoot = await getOPFSRoot();
             const file = await readFile(message.path, downloadRoot);
             await downloadFile(file, message.path);
-            sendResponse({ success: true });
-          })();
-          break;
-
-        case "uploadFile":
-          (async () => {
-            if (!message.path || !message.data) {
-              throw new Error(
-                "Path and data are required for uploadFile action"
-              );
-            }
-            await saveFile(message.path, message.data, message.type);
             sendResponse({ success: true });
           })();
           break;
