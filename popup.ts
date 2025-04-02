@@ -32,6 +32,34 @@ interface ChromeMessage {
 // Use chrome.tabs.Tab type instead of custom Tab interface
 type Tab = chrome.tabs.Tab;
 
+// Function to format file size
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+}
+
+// Function to get file icon based on file type
+export function getFileIcon(fileName: string): string {
+  const extension = fileName.split(".").pop()?.toLowerCase() || "";
+  const icons: Record<string, string> = {
+    pdf: "fa-file-pdf",
+    doc: "fa-file-word",
+    docx: "fa-file-word",
+    txt: "fa-file-lines",
+    jpg: "fa-file-image",
+    jpeg: "fa-file-image",
+    png: "fa-file-image",
+    gif: "fa-file-image",
+    zip: "fa-file-zipper",
+    rar: "fa-file-zipper",
+    default: "fa-file",
+  };
+  return `<i class="fas ${icons[extension] || icons.default}"></i>`;
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const fileList = document.getElementById("fileList") as HTMLDivElement;
   const refreshBtn = document.getElementById("refreshBtn") as HTMLButtonElement;
@@ -44,34 +72,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   ) as HTMLButtonElement;
 
   console.log("DOM Content Loaded");
-
-  // Function to format file size
-  function formatFileSize(bytes: number): string {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  }
-
-  // Function to get file icon based on file type
-  function getFileIcon(fileName: string): string {
-    const extension = fileName.split(".").pop()?.toLowerCase() || "";
-    const icons: Record<string, string> = {
-      pdf: "fa-file-pdf",
-      doc: "fa-file-word",
-      docx: "fa-file-word",
-      txt: "fa-file-lines",
-      jpg: "fa-file-image",
-      jpeg: "fa-file-image",
-      png: "fa-file-image",
-      gif: "fa-file-image",
-      zip: "fa-file-zipper",
-      rar: "fa-file-zipper",
-      default: "fa-file",
-    };
-    return `<i class="fas ${icons[extension] || icons.default}"></i>`;
-  }
 
   // Function to show file details
   function showFileDetails(file: FileDetails): void {

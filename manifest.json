@@ -24,7 +24,7 @@
     }
   ],
   "icons": {
-    "16": "icons/icon.png",
+    "16": "icons/git remote add origin https://github.com/nnofa/opfs-exporer-extension.git.png",
     "48": "icons/icon.png",
     "128": "icons/icon.png"
   },

@@ -11,7 +11,6 @@ interface FileSystemHandle {
   readonly kind: "file" | "directory";
   readonly name: string;
   isSameEntry(other: FileSystemHandle): Promise<boolean>;
-  getFile(): Promise<File>; // Add getFile method
 }
 
 interface FileSystemDirectoryHandle extends FileSystemHandle {
@@ -26,6 +25,7 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
   ): Promise<FileSystemDirectoryHandle>;
   removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
   resolve(possibleDescendant: FileSystemHandle): Promise<string[] | null>;
+  [Symbol.asyncIterator](): AsyncIterator<FileSystemHandle>;
   keys(): AsyncIterableIterator<string>;
   values(): AsyncIterableIterator<FileSystemHandle>;
   entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
@@ -33,15 +33,23 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
 
 interface FileSystemFileHandle extends FileSystemHandle {
   readonly kind: "file";
+  getFile(): Promise<File>;
   createWritable(
     options?: FileSystemCreateWritableOptions
   ): Promise<FileSystemWritableFileStream>;
 }
 
 interface FileSystemWritableFileStream extends WritableStream {
-  write(data: BufferSource | Blob | string): Promise<void>;
+  write(data: FileSystemWriteChunkOptions): Promise<void>;
   seek(position: number): Promise<void>;
   truncate(size: number): Promise<void>;
+}
+
+interface FileSystemWriteChunkOptions {
+  type: "write" | "seek" | "truncate";
+  data?: BufferSource | Blob | string;
+  position?: number;
+  size?: number;
 }
 
 interface FileSystemCreateWritableOptions {
@@ -67,9 +75,10 @@ interface ChromeResponse {
 }
 
 // Function to get the root directory of OPFS
-async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
+export async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
   try {
-    const root = await navigator.storage.getDirectory();
+    const root =
+      (await navigator.storage.getDirectory()) as FileSystemDirectoryHandle;
     return root;
   } catch (error) {
     console.error("Error accessing OPFS:", error);
@@ -78,7 +87,7 @@ async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
 }
 
 // Function to recursively get all files in a directory
-async function getAllFiles(
+export async function getAllFiles(
   dir: FileSystemDirectoryHandle,
   path = ""
 ): Promise<FileDetails[]> {
@@ -89,7 +98,8 @@ async function getAllFiles(
       const entryPath = path + "/" + entry.name;
 
       if (entry.kind === "file") {
-        const file = await entry.getFile();
+        const fileHandle = entry as FileSystemFileHandle;
+        const file = await fileHandle.getFile();
         files.push({
           name: entry.name,
           path: entryPath,
@@ -114,7 +124,7 @@ async function getAllFiles(
 }
 
 // Function to read a file from OPFS
-async function readFile(
+export async function readFile(
   path: string,
   root: FileSystemDirectoryHandle
 ): Promise<File> {
@@ -183,7 +193,7 @@ async function saveFile(
       type: "write",
       data: buffer,
       position: 0,
-    });
+    } as FileSystemWriteChunkOptions);
 
     // Truncate to ensure the file size is correct
     await writable.truncate(buffer.byteLength);
@@ -196,7 +206,7 @@ async function saveFile(
 }
 
 // Function to delete a file from OPFS
-async function deleteFile(path: string): Promise<boolean> {
+export async function deleteFile(path: string): Promise<boolean> {
   try {
     const root = await getOPFSRoot();
     const parts = path.split("/").filter(Boolean);
