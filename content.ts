@@ -6,36 +6,6 @@ interface FileDetails {
   lastModified: number;
 }
 
-// Define interfaces for the File System Access API
-interface FileSystemHandle {
-  readonly kind: "file" | "directory";
-  readonly name: string;
-  isSameEntry(other: FileSystemHandle): Promise<boolean>;
-}
-
-interface FileSystemDirectoryHandle extends FileSystemHandle {
-  readonly kind: "directory";
-  getFileHandle(
-    name: string,
-    options?: { create?: boolean }
-  ): Promise<FileSystemFileHandle>;
-  getDirectoryHandle(
-    name: string,
-    options?: { create?: boolean }
-  ): Promise<FileSystemDirectoryHandle>;
-  removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
-  resolve(possibleDescendant: FileSystemHandle): Promise<string[] | null>;
-  [Symbol.asyncIterator](): AsyncIterator<FileSystemHandle>;
-  keys(): AsyncIterableIterator<string>;
-  values(): AsyncIterableIterator<FileSystemHandle>;
-  entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
-}
-
-interface FileSystemFileHandle extends FileSystemHandle {
-  readonly kind: "file";
-  getFile(): Promise<File>;
-}
-
 // Define interfaces for Chrome extension messaging
 interface ChromeMessage {
   action:

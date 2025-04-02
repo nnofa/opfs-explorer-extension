@@ -12,8 +12,8 @@
     "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["chrome"],
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
+    "types": ["chrome", "wicg-file-system-access"],
     "sourceMap": true,
     "inlineSources": true
   },
