@@ -6,48 +6,6 @@ interface FileDetails {
   lastModified: number;
 }
 
-// Define interfaces for the File System Access API
-interface FileSystemHandle {
-  readonly kind: "file" | "directory";
-  readonly name: string;
-  isSameEntry(other: FileSystemHandle): Promise<boolean>;
-  getFile(): Promise<File>; // Add getFile method
-}
-
-interface FileSystemDirectoryHandle extends FileSystemHandle {
-  readonly kind: "directory";
-  getFileHandle(
-    name: string,
-    options?: { create?: boolean }
-  ): Promise<FileSystemFileHandle>;
-  getDirectoryHandle(
-    name: string,
-    options?: { create?: boolean }
-  ): Promise<FileSystemDirectoryHandle>;
-  removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
-  resolve(possibleDescendant: FileSystemHandle): Promise<string[] | null>;
-  keys(): AsyncIterableIterator<string>;
-  values(): AsyncIterableIterator<FileSystemHandle>;
-  entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
-}
-
-interface FileSystemFileHandle extends FileSystemHandle {
-  readonly kind: "file";
-  createWritable(
-    options?: FileSystemCreateWritableOptions
-  ): Promise<FileSystemWritableFileStream>;
-}
-
-interface FileSystemWritableFileStream extends WritableStream {
-  write(data: BufferSource | Blob | string): Promise<void>;
-  seek(position: number): Promise<void>;
-  truncate(size: number): Promise<void>;
-}
-
-interface FileSystemCreateWritableOptions {
-  keepExistingData?: boolean;
-}
-
 // Define interfaces for Chrome extension messaging
 interface ChromeMessage {
   action:
@@ -60,16 +18,11 @@ interface ChromeMessage {
   path?: string;
 }
 
-interface ChromeResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
-
 // Function to get the root directory of OPFS
-async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
+export async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
   try {
-    const root = await navigator.storage.getDirectory();
+    const root =
+      (await navigator.storage.getDirectory()) as unknown as FileSystemDirectoryHandle;
     return root;
   } catch (error) {
     console.error("Error accessing OPFS:", error);
@@ -78,7 +31,7 @@ async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
 }
 
 // Function to recursively get all files in a directory
-async function getAllFiles(
+export async function getAllFiles(
   dir: FileSystemDirectoryHandle,
   path = ""
 ): Promise<FileDetails[]> {
@@ -89,7 +42,8 @@ async function getAllFiles(
       const entryPath = path + "/" + entry.name;
 
       if (entry.kind === "file") {
-        const file = await entry.getFile();
+        const fileHandle = entry as FileSystemFileHandle;
+        const file = await fileHandle.getFile();
         files.push({
           name: entry.name,
           path: entryPath,
@@ -114,7 +68,7 @@ async function getAllFiles(
 }
 
 // Function to read a file from OPFS
-async function readFile(
+export async function readFile(
   path: string,
   root: FileSystemDirectoryHandle
 ): Promise<File> {
@@ -136,67 +90,8 @@ async function readFile(
   }
 }
 
-// Function to save file to OPFS
-async function saveFile(
-  path: string,
-  data: number[] | ArrayBuffer,
-  type?: string
-): Promise<void> {
-  try {
-    const root = await getOPFSRoot();
-    const parts = path.split("/");
-    let current = root;
-
-    // Create directories if they don't exist
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      try {
-        current = await current.getDirectoryHandle(part, { create: true });
-      } catch (error) {
-        console.error(`Error creating directory ${part}:`, error);
-        throw error;
-      }
-    }
-
-    // Create or get the file handle
-    const fileName = parts[parts.length - 1];
-    let fileHandle: FileSystemFileHandle;
-    try {
-      fileHandle = await current.getFileHandle(fileName, { create: true });
-    } catch (error) {
-      console.error(`Error getting file handle for ${fileName}:`, error);
-      throw error;
-    }
-
-    // Create a writable stream
-    const writable = await fileHandle.createWritable();
-    if (!writable) {
-      throw new Error("Failed to create writable stream");
-    }
-
-    // Convert array data back to ArrayBuffer if needed
-    const buffer = Array.isArray(data) ? new Uint8Array(data).buffer : data;
-    console.log(`Writing file ${path} with buffer size:`, buffer.byteLength);
-
-    // Write the data with proper type
-    await writable.write({
-      type: "write",
-      data: buffer,
-      position: 0,
-    });
-
-    // Truncate to ensure the file size is correct
-    await writable.truncate(buffer.byteLength);
-
-    console.log(`File ${path} saved successfully`);
-  } catch (error) {
-    console.error(`Error saving file ${path}:`, error);
-    throw error;
-  }
-}
-
 // Function to delete a file from OPFS
-async function deleteFile(path: string): Promise<boolean> {
+export async function deleteFile(path: string): Promise<boolean> {
   try {
     const root = await getOPFSRoot();
     const parts = path.split("/").filter(Boolean);
