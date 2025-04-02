@@ -34,26 +34,6 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
 interface FileSystemFileHandle extends FileSystemHandle {
   readonly kind: "file";
   getFile(): Promise<File>;
-  createWritable(
-    options?: FileSystemCreateWritableOptions
-  ): Promise<FileSystemWritableFileStream>;
-}
-
-interface FileSystemWritableFileStream extends WritableStream {
-  write(data: FileSystemWriteChunkOptions): Promise<void>;
-  seek(position: number): Promise<void>;
-  truncate(size: number): Promise<void>;
-}
-
-interface FileSystemWriteChunkOptions {
-  type: "write" | "seek" | "truncate";
-  data?: BufferSource | Blob | string;
-  position?: number;
-  size?: number;
-}
-
-interface FileSystemCreateWritableOptions {
-  keepExistingData?: boolean;
 }
 
 // Define interfaces for Chrome extension messaging
@@ -68,17 +48,11 @@ interface ChromeMessage {
   path?: string;
 }
 
-interface ChromeResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-}
-
 // Function to get the root directory of OPFS
 export async function getOPFSRoot(): Promise<FileSystemDirectoryHandle> {
   try {
     const root =
-      (await navigator.storage.getDirectory()) as FileSystemDirectoryHandle;
+      (await navigator.storage.getDirectory()) as unknown as FileSystemDirectoryHandle;
     return root;
   } catch (error) {
     console.error("Error accessing OPFS:", error);
@@ -142,65 +116,6 @@ export async function readFile(
     return file;
   } catch (error) {
     console.error("Error reading file:", error);
-    throw error;
-  }
-}
-
-// Function to save file to OPFS
-async function saveFile(
-  path: string,
-  data: number[] | ArrayBuffer,
-  type?: string
-): Promise<void> {
-  try {
-    const root = await getOPFSRoot();
-    const parts = path.split("/");
-    let current = root;
-
-    // Create directories if they don't exist
-    for (let i = 0; i < parts.length - 1; i++) {
-      const part = parts[i];
-      try {
-        current = await current.getDirectoryHandle(part, { create: true });
-      } catch (error) {
-        console.error(`Error creating directory ${part}:`, error);
-        throw error;
-      }
-    }
-
-    // Create or get the file handle
-    const fileName = parts[parts.length - 1];
-    let fileHandle: FileSystemFileHandle;
-    try {
-      fileHandle = await current.getFileHandle(fileName, { create: true });
-    } catch (error) {
-      console.error(`Error getting file handle for ${fileName}:`, error);
-      throw error;
-    }
-
-    // Create a writable stream
-    const writable = await fileHandle.createWritable();
-    if (!writable) {
-      throw new Error("Failed to create writable stream");
-    }
-
-    // Convert array data back to ArrayBuffer if needed
-    const buffer = Array.isArray(data) ? new Uint8Array(data).buffer : data;
-    console.log(`Writing file ${path} with buffer size:`, buffer.byteLength);
-
-    // Write the data with proper type
-    await writable.write({
-      type: "write",
-      data: buffer,
-      position: 0,
-    } as FileSystemWriteChunkOptions);
-
-    // Truncate to ensure the file size is correct
-    await writable.truncate(buffer.byteLength);
-
-    console.log(`File ${path} saved successfully`);
-  } catch (error) {
-    console.error(`Error saving file ${path}:`, error);
     throw error;
   }
 }
